@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="graphical interface for EchoMSkit Echo MS processing"
+    />
+    <title>EchoMSkit GUI</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("echomskit-theme") || "light";
+        const savedScale = Number(localStorage.getItem("echomskit-gui-scale"));
+        const allowedScales = [90, 100, 110, 125, 150, 175, 200];
+        const initialScale = allowedScales.includes(savedScale) ? savedScale : 100;
+        const factor = initialScale / 100;
+        const effectiveWidth = window.innerWidth / factor;
+        document.documentElement.style.zoom = String(factor);
+        document.documentElement.style.setProperty(
+          "--viewport-height",
+          `${window.innerHeight / factor}px`,
+        );
+        document.documentElement.dataset.guiWidth = [1100, 850, 680, 620]
+          .filter((breakpoint) => effectiveWidth <= breakpoint)
+          .join(" ");
+      } catch {
+        document.documentElement.dataset.theme = "light";
+        document.documentElement.style.zoom = "1";
+        document.documentElement.dataset.guiWidth = "";
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css?v=1.0.0" />
+    <link rel="stylesheet" href="workspace.css?v=1.0.0" />
+    <script src="app.js?v=1.0.0" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand-cluster">
+          <button class="brand" id="brand-home" type="button"
+            aria-label="EchoMSkit workflow home">
+            <span class="brand-mark" aria-hidden="true">
+              <img src="assets/echomskit-logo.svg" alt="" />
+            </span>
+            <span>
+              <strong>EchoMSkit</strong>
+              <small><span class="brand-gui">GUI</span> <span class="brand-version">[v1.0.0]</span></small>
+            </span>
+          </button>
+          <label class="gui-scale-control" title="scale the entire application">
+            <span>Scale</span>
+            <select id="gui-scale" aria-label="application scale">
+              <option value="90">90%</option>
+              <option value="100">100%</option>
+              <option value="110">110%</option>
+              <option value="125">125%</option>
+              <option value="150">150%</option>
+              <option value="175">175%</option>
+              <option value="200">200%</option>
+            </select>
+          </label>
+        </div>
+
+        <nav class="primary-nav" aria-label="application sections">
+          <button class="nav-item active" id="run-tab" type="button" aria-current="page">
+            Workflow
+          </button>
+          <button class="nav-item" id="visualizer-tab" type="button">
+            Visualizer
+          </button>
+        </nav>
+
+        <div class="header-actions">
+          <button
+            class="header-text-button"
+            id="edit-data-tab"
+            type="button"
+            title="edit project input files"
+          >
+            Edit data
+          </button>
+          <a
+            class="sling-link external-sling-link"
+            href="https://sling.sg/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="visit the singapore lipidomics incubator website"
+          >
+            <img
+              src="assets/sling-banner.png"
+              alt="SLING - Singapore Lipidomics Incubator"
+            />
+          </a>
+          <button
+            class="icon-button theme-toggle"
+            id="theme-toggle"
+            type="button"
+            aria-label="enable night mode"
+            title="enable night mode"
+          >
+            <svg class="theme-icon moon-icon" viewBox="0 0 24 24"
+              aria-hidden="true">
+              <path d="M20 15.2A8.5 8.5 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z" />
+            </svg>
+            <svg class="theme-icon sun-icon" viewBox="0 0 24 24"
+              aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5" />
+              <path
+                d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main id="run-view" class="run-view">
+        <section class="project-panel" aria-labelledby="project-title">
+          <div class="project-copy">
+            <span class="eyebrow">active dataset</span>
+            <h1 id="project-title">Choose an EchoMSkit project folder</h1>
+            <p id="project-path">Select the folder containing param.txt and wiff_dir.</p>
+          </div>
+          <button class="secondary-button" id="choose-project" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+              <path d="M12 12v5m-2.5-2.5h5" />
+            </svg>
+            <span>Select folder</span>
+          </button>
+        </section>
+
+        <section class="summary-grid" aria-label="project summary">
+          <article class="fact">
+            <div>
+              <span>wiff files</span>
+              <strong id="data-count">-</strong>
+            </div>
+          </article>
+          <article class="fact">
+            <div>
+              <span>transitions</span>
+              <strong id="transition-count">-</strong>
+            </div>
+          </article>
+          <article class="fact">
+            <div>
+              <span>transition list</span>
+              <strong id="transition-file">-</strong>
+            </div>
+          </article>
+          <article class="fact">
+            <div>
+              <span>engine</span>
+              <strong id="worker-name">-</strong>
+            </div>
+          </article>
+        </section>
+
+        <section class="notice hidden" id="project-notice" role="status" aria-live="polite">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 2.5 20h19Z" />
+            <path d="M12 9v5m0 3h.01" />
+          </svg>
+          <div>
+            <strong>Project needs attention</strong>
+            <ul id="project-issues"></ul>
+          </div>
+        </section>
+
+        <section class="workflow-section" aria-labelledby="pipeline-title">
+          <div class="section-heading">
+            <h2 id="pipeline-title">Processing workflow</h2>
+            <p>One step processes the dataset. Existing outputs are detected automatically.</p>
+          </div>
+          <div class="run-panel" id="run-panel" aria-labelledby="run-title">
+            <span class="step-number">Step 1</span>
+            <div class="run-copy">
+              <h3 id="run-title">Process dataset</h3>
+              <p id="run-subtitle">Generates acq_time.csv, EchoMSkit_results.csv, and GUI plot data.</p>
+            </div>
+            <code class="run-output">EchoMSkit_results.csv</code>
+            <span class="step-status waiting" id="run-status">waiting</span>
+            <button class="run-button" id="run-all" type="button" disabled
+              aria-label="run EchoMSkit on this dataset">
+              <span class="run-ready">Run</span>
+              <span class="run-busy">Running...</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="workflow-section" aria-labelledby="outputs-title">
+          <div class="section-heading">
+            <h2 id="outputs-title">Outputs</h2>
+            <p>Written to the selected project folder</p>
+          </div>
+          <div class="outputs-grid">
+            <article class="output" id="output-acq">
+              <div><span>acq_time.csv</span><strong>waiting</strong></div>
+            </article>
+            <article class="output" id="output-results">
+              <div><span>results csv</span><strong>waiting</strong></div>
+            </article>
+            <article class="output" id="output-misc">
+              <div><span>misc plot data</span><strong>waiting</strong></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="activity-panel" aria-labelledby="activity-title">
+          <div class="activity-header">
+            <div>
+              <h2 id="activity-title">EchoMSkit console</h2>
+            </div>
+            <button id="clear-activity" type="button">Clear</button>
+          </div>
+          <div class="activity-log" id="activity-log" role="log" aria-live="polite">
+            <p class="empty-log">Select a project to begin.</p>
+          </div>
+        </section>
+      </main>
+
+      <main id="visualizer-view" class="visualizer-view hidden">
+        <section class="visualizer-toolbar" aria-label="Chromatogram workspace">
+          <aside class="visualizer-sidebar" id="visualizer-sidebar"
+            aria-labelledby="visualizer-title">
+            <div class="visualizer-heading">
+              <h1 id="visualizer-title">Browse results</h1>
+              <p id="visualizer-dataset">Select a processed dataset in Workflow first.</p>
+            </div>
+            <div class="visualizer-controls">
+              <div class="visualizer-field transition-field">
+                <span>Transitions</span>
+                <input
+                  id="visualizer-search"
+                  class="transition-search"
+                  type="text"
+                  placeholder="Search transitions..."
+                  aria-label="search transitions"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                />
+                <select id="visualizer-transition" size="10"
+                  aria-label="transition"><option value="">Select a transition</option></select>
+              </div>
+              <section class="visualizer-control-stack"
+                aria-labelledby="plot-settings-title">
+                <h2 class="control-heading" id="plot-settings-title">Plot settings</h2>
+                <div class="visualizer-sizing" aria-label="chromatogram dimensions">
+                  <label
+                    class="visualizer-field"><span>Width (px)</span><input id="visualizer-width" type="number" min="260" max="1200" step="20" value="420" /></label>
+                  <span aria-hidden="true">×</span>
+                  <label
+                    class="visualizer-field"><span>Height (px)</span><input id="visualizer-height" type="number" min="130" max="700" step="10" value="190" /></label>
+                </div>
+                <div class="visualizer-range" id="visualizer-range">
+                  <label
+                    class="visualizer-field"><span>RT start</span><input id="visualizer-rt-start" type="number" min="0" max="999" step="0.05" value="0" /></label>
+                  <label
+                    class="visualizer-field"><span>RT end</span><input id="visualizer-rt-end" type="number" min="0" max="999" step="0.05" value="0" /></label>
+                  <label
+                    class="visualizer-field"><span>Max intensity</span><input id="visualizer-intensity" type="number" min="0" step="1" value="0" /></label>
+                </div>
+                <section class="visualizer-matrices" aria-label="Saved integrations">
+                  <label
+                    class="visualizer-field backups-field"><span>Saved integration</span>
+                    <select id="visualizer-backups" aria-label="plot version" title="restore a saved plot version" disabled><option value="">No saved versions yet</option></select>
+                  </label>
+                  <div class="visualizer-backup-actions">
+                    <button
+                      class="icon-button visualizer-delete"
+                      id="visualizer-delete-backup"
+                      type="button"
+                      disabled
+                      aria-label="delete selected backup"
+                      title="delete selected backup"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" />
+                      </svg>
+                    </button>
+                    <button
+                      class="icon-button visualizer-rename"
+                      id="visualizer-rename-backup"
+                      type="button"
+                      disabled
+                      aria-label="rename selected backup"
+                      title="rename selected backup"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 20h5l10-10a2.8 2.8 0 0 0-4-4L5 16zM13 7l4 4" />
+                      </svg>
+                    </button>
+                    <button
+                      class="icon-button visualizer-import"
+                      id="visualizer-import-backup"
+                      type="button"
+                      disabled
+                      aria-label="import backup"
+                      title="backups are not available for EchoMSkit plot files yet"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3v11m-4-4 4 4 4-4M5 17v3h14v-3" />
+                      </svg>
+                    </button>
+                  </div>
+                </section>
+              </section>
+            </div>
+            <div class="visualizer-preferences">
+              <label
+                title="Up/Down selects, Enter renders, Left refreshes, and Right saves edited bounds"
+                class="visualizer-shortcut-toggle"><input id="visualizer-shortcuts-global" type="checkbox" checked /><span>Arrow shortcuts when minimized</span></label>
+            </div>
+          </aside>
+          <div class="visualizer-main">
+            <header class="visualizer-actionbar">
+              <button
+                class="icon-button visualizer-selector-expand"
+                id="visualizer-selector-expand"
+                type="button"
+                aria-expanded="true" aria-controls="visualizer-sidebar"
+                aria-label="collapse graph selector"
+                title="collapse graph selector"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" />
+                </svg>
+                <span>Browse</span></button>
+              <div class="visualizer-actions">
+                <button
+                  class="icon-button visualizer-refresh"
+                  id="visualizer-refresh"
+                  type="button"
+                  aria-label="reload selected transition"
+                  title="reload selected transition"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
+                  </svg></button>
+                <button
+                  class="icon-button visualizer-save"
+                  id="visualizer-save"
+                  type="button"
+                  disabled
+                  aria-label="save dragged integration bounds"
+                  title="save dragged integration bounds"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
+                    <path d="M8 4v5h6V4M8 20v-6h8v6" />
+                  </svg>
+                  <span>Save &amp; integrate</span></button>
+                <button
+                  class="icon-button visualizer-override visualizer-labelled-action"
+                  id="visualizer-overwrite-backup"
+                  type="button"
+                  disabled
+                  aria-label="overwrite selected backup"
+                  title="overwrite selected backup with these dragged bounds"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 4h11l3 3v13H5zM8 4v5h6V4M8 20v-6h8v6" />
+                  </svg>
+                  <span>Override</span>
+                </button>
+              </div>
+            </header>
+            <section class="visualizer-selection" aria-label="Selected transition">
+              <strong id="visualizer-analyte">Choose a transition to render EchoMSkit chromatograms.</strong>
+              <div class="visualizer-load-state">
+                <span id="visualizer-status" role="status" aria-live="polite">Ready</span>
+                <button
+                  class="visualizer-cancel-render hidden"
+                  id="visualizer-cancel"
+                  type="button"
+                  aria-label="cancel rendering"
+                  title="cancel rendering"
+                >
+              ×
+            </button>
+                <button
+                  class="secondary-button visualizer-apply-shared reference-apply-button"
+                  id="visualizer-apply-references"
+                  type="button"
+                  disabled
+                  aria-label="apply selected reference integrations to this transition"
+                  title="apply selected reference integrations to this transition"
+                >
+                  Apply selected references
+                </button>
+                <button
+                  class="secondary-button visualizer-apply-shared reference-apply-button"
+                  id="visualizer-auto-shift"
+                  type="button"
+                  disabled
+                  aria-label="auto-shift plots from selected references"
+                  title="auto-shift plots from selected references"
+                >
+                  Auto-shift from references
+                </button>
+                <label class="visualizer-shortcut-toggle"
+                  title="after applying a uniform reference window, auto-shift each plot from the selected references"><input id="visualizer-auto-shift-after-uniform" type="checkbox" checked /><span>Auto-shift after uniform</span></label>
+              </div>
+            </section>
+            <section class="visualizer-empty" id="visualizer-empty">
+              <div class="empty-plot-icon" aria-hidden="true">
+                <svg viewBox="0 0 64 48">
+                  <path d="M6 4v36h52M10 33h8l5-8 5 8h7l7-25 6 25h9" />
+                </svg>
+              </div>
+              <h2>Inspect your results</h2>
+              <p>Choose a transition in the browser to review its chromatograms and integration bounds.</p>
+            </section>
+            <section
+              class="visualizer-plot-grid"
+              id="visualizer-plots"
+              aria-label="EchoMSkit chromatogram plots"
+            ></section>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>EchoMSkit GUI [v1.0.0]</span>
+        <a
+          id="footer-status"
+          class="external-sling-link"
+          href="https://sling.sg/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >https://sling.sg/</a>
+      </footer>
+    </div>
+
+    <div class="modal-backdrop hidden" id="project-modal" role="presentation">
+      <section class="project-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <span class="modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 6.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+            <path d="M3 9h18" />
+          </svg>
+        </span>
+        <span class="eyebrow">project setup</span>
+        <h2 id="modal-title">Where is your dataset?</h2>
+        <p id="modal-message">Choose the folder containing the EchoMSkit input files. The GUI will remember it next time.</p>
+        <button class="primary-button" id="modal-choose-project" type="button">
+          Choose project folder
+        </button>
+        <small>Your files are processed locally.</small>
+      </section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="prompt-modal" role="presentation">
+      <section class="project-modal prompt-modal" role="dialog" aria-modal="true" aria-labelledby="prompt-title">
+        <span class="eyebrow">backup label</span>
+        <h2 id="prompt-title">Rename backup</h2>
+        <p id="prompt-message"></p>
+        <input id="prompt-input" class="prompt-input" type="text" autocomplete="off" />
+        <div class="prompt-actions">
+          <button id="prompt-cancel" class="secondary-button" type="button">Cancel</button>
+          <button id="prompt-ok" class="primary-button" type="button">Save</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="data-editor-modal" role="presentation">
+      <section
+        class="data-editor-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="data-editor-title"
+      >
+        <aside class="data-editor-sidebar" aria-label="editable dataset files">
+          <div>
+            <span class="eyebrow">dataset editor</span>
+            <h2 id="data-editor-title">Edit data</h2>
+          </div>
+          <div class="data-editor-files" id="data-editor-files"></div>
+        </aside>
+        <section class="data-editor-main">
+          <div class="data-editor-toolbar">
+            <div>
+              <strong id="data-editor-current">Select a file</strong>
+              <span id="data-editor-status">Ready</span>
+            </div>
+            <div class="data-editor-actions">
+              <select id="data-editor-backups" title="restore a saved file backup">
+                <option value="">No backups yet</option>
+              </select>
+              <button id="data-editor-restore" type="button">Restore</button>
+              <button id="data-editor-rename" type="button">Rename</button>
+              <button id="data-editor-delete" type="button">Delete</button>
+              <button id="data-editor-refresh" type="button">Refresh</button>
+              <button id="data-editor-save" type="button">Save</button>
+              <button id="data-editor-close" type="button">Close</button>
+            </div>
+          </div>
+          <div class="data-editor-table-actions hidden" id="data-editor-table-actions">
+            <button id="data-editor-add-row" type="button">Add row</button>
+            <button id="data-editor-add-column" type="button">Add column</button>
+          </div>
+          <div class="data-editor-body" id="data-editor-body">
+            <p class="empty-log">Select a file on the left to begin editing.</p>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <div class="toast-region" id="toast-region" aria-live="assertive"></div>
+  </body>
+</html>

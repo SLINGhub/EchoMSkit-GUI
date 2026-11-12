@@ -1,0 +1,14 @@
+/target
+/Cargo.lock
+.DS_Store
+app/src-tauri/target/
+app/src-tauri/gen/
+app/src-tauri/icons/
+app/src-tauri/binaries/
+
+# local notes and reference copies, never committed
+CLAUDE.md
+/gui/
+/sample_data/
+/sample_data.zip
+/.claude/

@@ -1,0 +1,16 @@
+{
+  "bundle": {
+    "icon": [
+      "icons/icon.icns"
+    ],
+    "externalBin": [
+      "binaries/EchoMSkit-worker"
+    ],
+    "resources": [
+      "../../EchoMSkit_plot.r"
+    ],
+    "macOS": {
+      "hardenedRuntime": true
+    }
+  }
+}
